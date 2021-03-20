@@ -1,0 +1,274 @@
+#+title: SilF4ware
+
+* Supported Hardware
+
+** Flight Controller
+
+| Flight Controller    | Weight | Notes         | Board Pinout | Source   |
+|----------------------+--------+---------------+--------------+----------|
+| Omnibus              | 3.2g   |               | [[https://github.com/markusgritsch/SilF4ware/blob/master/Targets/STM32F405 Omnibus/board_pinout.jpg][Image]]        | [[https://www.banggood.com/Micro-20x20mm-Betaflight-Omnibus-STM32F4-F4-Flight-Controller-Built-in-BEC-OSD-for-RC-FPV-Racing-Drone-p-1132495.html][Banggood]] |
+| NOXE (first version) | 3.4g   |               | [[https://github.com/markusgritsch/SilF4ware/blob/master/Targets/STM32F411 NOXE/board_pinout.jpg][Image]]        |          |
+| NOXE v1              | 4.3g   | *untested*      | [[https://github.com/markusgritsch/SilF4ware/blob/master/Targets/STM32F411 NOXE_V1/board_pinout.jpg][Image]]        | [[https://www.banggood.com/20x20mm-Upgrade-Betaflight-F4-Noxe-V1-Flight-Controller-AIO-OSD-5V-8V-BEC-w-or-Barometer-and-Blackbox-for-RC-Drone-FPV-Racing-p-1310419.html][Banggood]] |
+| F4-XSD               | 4.2g   | [[https://www.rcgroups.com/forums/showpost.php?p=44836165&postcount=994][RCGroups Post]] | [[https://github.com/markusgritsch/SilF4ware/blob/master/Targets/STM32F405 F4XSD/board_pinout.jpg][Image]]        | [[https://www.xt-xinte.com/h-product-detail.html?goods_id=691499][xt-xinte]] |
+
+** Receiver Modules
+
+
+The firmware uses the Bayang protocol 
+
+- 8 digital aux channels
+- 2 analog aux channels
+- telemetry for battery voltage, packet count, PID tuning
+- low latency 5 ms packet period 
+- autobind
+
+via a SPI-connected XN297 or nRF24L01+ or nRF24L01+PA+LNA radio module.
+
+
+| Receiver             | Weight | Notes                      | Source                                          |
+|----------------------+--------+----------------------------+-------------------------------------------------|
+| NRF24 Mini           | 0.5g   | [[https://www.rcgroups.com/forums/showpost.php?p=41923007&postcount=285][How to add an wire antenna]] | use "nrf24l01 mini" as search term ([[https://www.banggood.com/NRF24L01-Mini-SMD-2_4GHz-Wireless-Module-Power-Enhanced-Version-SMD-Receiver-Transceiver-Low-Voltage-Oltage-Regulator-Board-5V-p-1495082.html][Banggood]])   |
+| NRF24 PA+LNA (GT-24) | 1.1g   | [[https://www.rcgroups.com/forums/showpost.php?p=42688011&postcount=640][How to add an U.FL antenna]] | use "GT-24" as search term ([[https://www.banggood.com/GT-24-Digital-Wireless-Module-2_4G-NRF24L01-PA-LNA-Industrial-Grade-1100M-Long-Distance-With-Non-wel-p-1361350.html][Banggood]])           |
+| XN297                |        |                            | Can be harvested from toy TX like H101, H8, ... |
+| XN297 DIY PCB        |        |                            | [[https://oshpark.com/shared_projects/ajz5Z5tu][DIY PCB]]                                         |
+| XN297                |        | *untested*                   | [[https://www.banggood.com/Geekcreit-XN297L-2_4G-Long-Distance-Ultra-Low-Power-RF-Module-Wireless-Transceiver-Module-p-1407282.html][Banggood]]                                        |
+
+
+* Configuration
+
+** Overview
+
+| Configuration Type               | Filename             |
+|----------------------------------+----------------------|
+| Main Configuration               | =config.h=             |
+| Battery Cell Count               | =battery.c=            |
+| Receiver Module                  | see =radio_config.txt= |
+| DShot Driver Selection           | =hardware.h=           |
+|                                  |                      |
+| *PID Configuration*                |                      |
+| Basic PID Settings               | =config.h=             |
+| PID Advanced Configuration       | =pid.c=                |
+| PID Level Mode Configuration     | =angle_pid.c=          |
+|                                  |                      |
+| *DShot Driver Configuration*       |                      |
+| Bidirectional DShot (RPM Filter) | =drv_dshot_bidir.c=    |
+| DMA DShot                        | =drv_dshot_dma.c=      |
+| Conventional DShot               | =drv_dshot.c=          |
+
+** Basic Configuration
+
+*** Battery Cell Count
+
+Make sure to adjust ~CELL_COUNT_UNSCALED~ in =battery.c= if needed, e.g. for a 2S setup:
+
+#+begin_src C
+  #define CELL_COUNT_UNSCALED 2
+#+end_src
+
+*** Receiver Module
+
+The default configuration is setup for NRF24 modules. If using a NRF24 module with PA+LNA, it is recommended to adjust ~TX_POWER~ in =config.h=:
+
+#+begin_src C
+#define TX_POWER 1 // 0 .. 3 (use 1 when using an nRF24L01 PA+LNA module)
+#+end_src
+
+If using a XN297 module, see =radio_config.txt= for configuration notes.
+
+*** DShot
+
+**** Bidirectional DShot (RPM Filter) (*default*)
+
+Make sure that the number of magnets on the motor bell is set correctly in =drv_dshot_bidir.c=:
+
+#+begin_src C
+#define MOTOR_POLE_COUNT 14 // usually on 22xx motors and above
+// #define MOTOR_POLE_COUNT 12 // usually on 18xx motors and below
+#+end_src
+
+**** Other DShot Drivers
+
+If you don't want to use Bidirectional DShot, you need to choose another driver in =hardware.h=:
+
+#+begin_src C
+#define DSHOT_DMA_BIDIR // needed for RPM_FILTER, 4k loop frequency max
+// #define DSHOT_DMA_DRIVER // conventional Dshot, consumes less cycles, works for 8k loop frequency
+// #define DSHOT_DRIVER // delay version
+#+end_src
+
+In that case you also have to comment the RPM Filter in =config.h=:
+
+#+begin_src C
+//#define RPM_FILTER // requires DSHOT_DMA_BIDIR in hardware.h -- also ensure MOTOR_POLE_COUNT in drv_dshot_bidir.c is correct
+//#define RPM_FILTER_HZ_MIN 100
+//#define RPM_FILTER_2ND_HARMONIC false // note, that there are 12 notch filters (4 motors * 3 axes) per harmonic
+//#define RPM_FILTER_3RD_HARMONIC true
+//#define RPM_FILTER_Q 6 // -3dB bandwidth = f0 / Q -- but a higher Q also results in a longer settling time
+#+end_src
+
+*** 2D/3D Flying
+
+3D flying is enabled by default. If using a 2D setup, following changes are needed:
+
+In the main config file (=config.h=):
+
+#+begin_src C
+//#define INVERTED_ENABLE
+#define FN_INVERTED CH_OFF
+//#define LEVEL_MODE_INVERTED_ENABLE // be careful when enabling this
+#+end_src
+
+In the DShot configuration file (e.g. =drv_dshot_bidir.c= when using RPM Filter):
+
+#+begin_src C
+// Enable this for 3D. The 'Motor Direction' setting in BLHeliSuite must be set to 'Bidirectional' (or 'Bidirectional Rev.') accordingly:
+//#define BIDIRECTIONAL
+#+end_src
+
+*** Props in/out
+
+Props out configuration is enabled by default:
+
+#+begin_src C
+// Invert yaw pid. Necessary when spinning props outwards.
+#define INVERT_YAW_PID
+#+end_src
+
+ If you are using Props in, just comment ~INVERT_YAW_PID~ to disable it:
+
+ #+begin_src C
+// Invert yaw pid. Necessary when spinning props outwards.
+//#define INVERT_YAW_PID
+ #+end_src
+
+*** Rates
+
+Default rates are very high, adjust them if needed:
+
+#+begin_src  C
+// rate in deg/sec for acro mode
+#define MAX_RATE 1800
+#define MAX_RATEYAW 1800
+#+end_src
+
+** TODO Transmitter Configuration
+
+*** Devo TX
+
+A Devo 7E build and model file which is able to display PID values can be found in [[https://www.rcgroups.com/forums/showpost.php?p=42032515&postcount=398][this post]]. Note that it will only display PIDs set via gestures, not when set via analog aux channels.
+
+* Compiling & Flashing
+
+It is recommended to use STM32CubeIDE for compiling SilF4ware. Keil uVision can also be used, but it produces some non-working binary when using lot's of RAM. Change ~FFT_SIZE~ in =fft.h= to 2048 when using Keil. Flashing can be done with betaflight-configurator. After compiling, the target files can be found in the "Release" directory.
+
+* Using & Troubleshooting
+
+** Gestures
+
+When you are used to use other silverware branches, please note that the gestures for PID tuning are swapped.
+
+| Gesture | Function                                         |
+|---------+--------------------------------------------------|
+| LRU     | reboot flight controller                         |
+| LRD     | switch to DFU mode                               |
+| LLU     | switch to motors test mode                       |
+| LLD     | exit motors test mode                            |
+| UUU     | toggle autobind flag (remember to save with DDD) |
+| UDD     | switch to the next PID column                    |
+| UDU     | switch to the next PID row                       |
+| DDD     | save configuration                               |
+
+** PID Stick Tuning
+
+~PID_STICK_TUNING~ is a more comfortable alternative to ~PID_GESTURE_TUNING~.
+
+With the right stick the desired term is selected by moving and holding the stick to the corresponding position, while yaw stick movement changes its value. The rate of change is proportional to the yaw stick deflection, so coarse as well as fine changes are easy to make.
+
+#+begin_src 
+             |                 P  |  I
+             |                    |
+decrease ----+---- increase   ----+----
+             |                    |
+             |                 *  |  D
+
+                             * next axis
+#+end_src
+
+See [[https://www.youtube.com/watch?v=xfdoUdST2iQ][this demonstration video on YouTube]]. 
+
+** Motors test mode
+
+With default setup, when using LLU stick gesture (Left, Left, Up) SilF4ware switches into motor test mode (~MOTORS_TO_THROTTLE~). It can be used to verify that the configured motor order is correct, but also to check for bad/noisy props.
+
+In motor test mode, push the stick in the corresponding direction, e.g. left up will make the motor spin which is configured as front left. LLD stick gesture (Left, Left, Down) turns this mode off again.
+
+If you are used to other silverware branches, please note that with SilF4ware it is not needed to adjust the idle offset to make sure that only one motor spins.
+
+** LED Blink Codes
+
+If SilF4ware fails to start and the FC LED flashes, the following table can be used for troubleshooting:
+
+| Flash count | Meaning                                       |
+|-------------+-----------------------------------------------|
+|           2 | low battery at powerup - if enabled by config |
+|           3 | radio chip not detected                       |
+|           4 | Gyro not found                                |
+|           5 | clock, interrupts, systick, bad code          |
+|           6 | flash write error                             |
+|           7 | ESC pins on more than two distinct GPIO ports |
+
+The blink codes are defined in =usermain.c=.
+
+
+* Advanced Features
+
+** Analog Aux Channels
+
+The variables ~aux_analog[ 0 ]~ and ~aux_analog[ 1 ]~ hold a value between 0.0 and 2.0 which can be used in various places in the code. Per default they are used to tweak Kp and Kd respectively. This is done in =pid.c=:
+
+#+begin_src C
+#define AA_pidkp ( x <2 ? pdScaleValue * aux_analog[ 0 ] : 1.0f ) // Scale Kp and Kd only for roll and pitch.
+#define AA_pidki 1.0f
+#define AA_pidkd ( x <2 ? pdScaleValue * aux_analog[ 1 ] : 1.0f ) // Scale Kp and Kd only for roll and pitch.
+#+end_src
+
+If you want to use them for something else, change the define for ~AA_pidkp~ and ~AA_pidkd~ to look similar to the one for ~AA_pidki~:
+
+#+begin_src C
+#define AA_pidkp 1.0f
+#define AA_pidki 1.0f
+#define AA_pidkd 1.0f
+#+end_src
+
+Now you could use  ~aux_analog[ 0 ]~ and ~aux_analog[ 1 ]~ for example to tune the filter frequency by adding it to =config.h= like this:
+
+#+begin_src C
+#define GYRO_LPF_2ND_HZ_BASE 400 * aux_analog[ 0 ]
+#define GYRO_LPF_2ND_HZ_MAX 400 * aux_analog[ 1 ]
+#+end_src
+
+** Blackbox Logging
+
+Blackbox logging is possible with an external logging device. See details [[https://www.rcgroups.com/forums/showthread.php?3294959-SilF4ware-an-STM32F4-port-of-SilverWare/page45#post42779217][here]]
+
+** Overclocking
+
+ It's possible to run 8k loop frequency with bidirectional Dshot even on STM32F411 boards.
+
+*Overclocking:*
+
+In =drv_time.h= increase ~SYS_CLOCK_FREQ_MHZ~ to 150
+
+*8k loop frequency:*
+
+In =config.h= set ~LOOPTIME~ to 125
+
+*necessary for 8k loop:*
+
+In =drv_dshot_bidir.c= use DSHOT 600
+
+
+* References
+ 
+- [[https://github.com/markusgritsch/SilF4ware][Github Repository]]
+- [[https://www.rcgroups.com/forums/showthread.php?3294959-SilF4ware-an-STM32F4-port-of-SilverWare][RCGroups thread]]
