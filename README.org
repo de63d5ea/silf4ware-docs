@@ -57,14 +57,6 @@ via a SPI-connected XN297 or nRF24L01+ or nRF24L01+PA+LNA radio module.
 
 ** Basic Configuration
 
-*** Battery Cell Count
-
-Make sure to adjust ~CELL_COUNT_UNSCALED~ in =battery.c= if needed, e.g. for a 2S setup:
-
-#+begin_src C
-  #define CELL_COUNT_UNSCALED 2
-#+end_src
-
 *** Receiver Module
 
 The default configuration is setup for NRF24 modules. If using a NRF24 module with PA+LNA, it is recommended to adjust ~TX_POWER~ in =config.h=:
