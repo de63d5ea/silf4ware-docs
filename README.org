@@ -174,9 +174,9 @@ As of March 2021, Jumper T-Lite comes with Multiprotocol Module Firmware v1.3.1.
 
 For displaying PID Values, MPM firmware with at least v1.3.2.30 is needed (quoting from the [[https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/releases/tag/v1.3.2.30][release notes]]):
 
-#+begin_verse
+#+begin_src
 If supported by the Silverware telemetry the PID values are appearing as sensors: AccX=P, AccY=I, AccZ=D (you can rename the sensors after the discovery)
-#+end_verse
+#+end_src
 
 For updating the MPM firmware, see the [[https://www.multi-module.org/using-the-module/firmware-updates/][MULTI-Module Documentation]]. 
 
