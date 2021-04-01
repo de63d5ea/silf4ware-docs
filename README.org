@@ -143,7 +143,50 @@ Default rates are very high, adjust them if needed:
 #define MAX_RATEYAW 1800
 #+end_src
 
-** TODO Transmitter Configuration
+
+** Transmitter Configuration
+
+*** Channel Mapping
+
+By default, SilFware is setup for using Deviaton TX.
+
+| Function             | Default Channel |
+|----------------------+-----------------+
+| Throttle Kill Switch | ~DEVO_CHAN_5~   |
+| Inverted (3D) Mode   | ~DEVO_CHAN_6~   |
+| LED on               | ~DEVO_CHAN_7~   |
+| Rates                | ~DEVO_CHAN_9~   |
+| Level Mode           | ~DEVO_CHAN_10~  |
+| Motor Beeps          | ~DEVO_CHAN_12~  |
+| Motors Test Mode     | ~CH_AUX1~       |
+
+If you are using OpenTX with Multiprotocol Module, you probably want to replace =DEVO_CHAN_x= with =MULTI_CHAN_x=, e.g.:
+
+#+begin_src C
+#define THROTTLE_KILL_SWITCH MULTI_CHAN_5
+#+end_src
+
+*** Jumper T-Lite / MPM / OpenTX
+
+**** PID Display
+
+As of March 2021, Jumper T-Lite comes with Multiprotocol Module Firmware v1.3.1.78 installed.
+
+For displaying PID Values, MPM firmware with at least v1.3.2.30 is needed (quoting from the [[https://github.com/pascallanger/DIY-Multiprotocol-TX-Module/releases/tag/v1.3.2.30][release notes]]):
+
+#+begin_verse
+If supported by the Silverware telemetry the PID values are appearing as sensors: AccX=P, AccY=I, AccZ=D (you can rename the sensors after the discovery)
+#+end_verse
+
+For updating the MPM firmware, see the [[https://www.multi-module.org/using-the-module/firmware-updates/][MULTI-Module Documentation]]. 
+
+**** RSSI
+
+In config.h, comment this line:
+
+#+begin_src C
+//#define DISPLAY_MAX_USED_LOOP_TIME_INSTEAD_OF_RX_PACKETS
+#+end_src
 
 *** Devo TX
 
